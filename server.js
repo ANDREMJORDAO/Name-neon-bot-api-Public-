@@ -1,40 +1,63 @@
-const express = require("express");
-const cors = require("cors");
+const express = require("express")
+const cors = require("cors")
+const jwt = require("jsonwebtoken")
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+const app = express()
+app.use(cors())
+app.use(express.json())
 
+const SECRET = "NEON_BOT_SUPER_SECRET_2025"
+
+// usuários (depois pode virar banco)
 const users = [
-  { email: "admin@clickstoredeals.com", password: "123456", plan: "admin" },
-  { email: "user@clickstoredeals.com", password: "123456", plan: "pro" }
-];
+  { email: "admin@clickstoredeals.com", password: "Neon@2025!", role: "admin" }
+]
 
+// LOGIN
 app.post("/login", (req, res) => {
-  const { email, password } = req.body;
 
-  const user = users.find(
-    u => u.email === email && u.password === password
-  );
+  const { email, password } = req.body
 
-  if (!user) {
-    return res.status(401).json({ error: "Credenciais inválidas" });
+  const user = users.find(u => u.email === email && u.password === password)
+
+  if(!user){
+    return res.json({ success: false })
   }
+
+  const token = jwt.sign(
+    { email: user.email, role: user.role },
+    SECRET,
+    { expiresIn: "2h" } // expira
+  )
 
   res.json({
     success: true,
-    user: {
-      email: user.email,
-      plan: user.plan
-    }
-  });
-});
+    token
+  })
 
-app.get("/", (req, res) => {
-  res.send("NEON BOT API ONLINE 🚀");
-});
+})
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("Server rodando na porta", PORT);
-});
+
+// MIDDLEWARE PROTEÇÃO
+function auth(req, res, next){
+
+  const token = req.headers.authorization
+
+  if(!token) return res.status(401).json({ error: "Sem token" })
+
+  try{
+    const decoded = jwt.verify(token, SECRET)
+    req.user = decoded
+    next()
+  } catch{
+    return res.status(401).json({ error: "Token inválido" })
+  }
+
+}
+
+// ROTA PROTEGIDA (teste)
+app.get("/me", auth, (req, res) => {
+  res.json(req.user)
+})
+
+app.listen(3000, () => console.log("Servidor rodando"))
