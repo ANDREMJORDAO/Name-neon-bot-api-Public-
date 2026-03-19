@@ -8,7 +8,7 @@ app.use(express.json())
 
 const SECRET = "NEON_BOT_SUPER_SECRET_2025"
 
-// usuários (depois pode virar banco)
+// usuário teste
 const users = [
   { email: "admin@clickstoredeals.com", password: "Neon@2025!", role: "admin" }
 ]
@@ -17,6 +17,10 @@ const users = [
 app.post("/login", (req, res) => {
 
   const { email, password } = req.body
+
+  if(!email || !password){
+    return res.status(400).json({ success: false })
+  }
 
   const user = users.find(u => u.email === email && u.password === password)
 
@@ -27,37 +31,38 @@ app.post("/login", (req, res) => {
   const token = jwt.sign(
     { email: user.email, role: user.role },
     SECRET,
-    { expiresIn: "2h" } // expira
+    { expiresIn: "2h" }
   )
 
-  res.json({
-    success: true,
-    token
-  })
-
+  res.json({ success: true, token })
 })
 
+// TESTE (RAIZ)
+app.get("/", (req, res) => {
+  res.send("API ONLINE 🚀")
+})
 
-// MIDDLEWARE PROTEÇÃO
-function auth(req, res, next){
+// ROTA PROTEGIDA
+app.get("/me", (req, res) => {
 
   const token = req.headers.authorization
 
-  if(!token) return res.status(401).json({ error: "Sem token" })
-
-  try{
-    const decoded = jwt.verify(token, SECRET)
-    req.user = decoded
-    next()
-  } catch{
-    return res.status(401).json({ error: "Token inválido" })
+  if(!token){
+    return res.status(401).json({ error: "Sem token" })
   }
 
-}
+  try {
+    const decoded = jwt.verify(token, SECRET)
+    res.json(decoded)
+  } catch {
+    res.status(401).json({ error: "Token inválido" })
+  }
 
-// ROTA PROTEGIDA (teste)
-app.get("/me", auth, (req, res) => {
-  res.json(req.user)
 })
 
-app.listen(3000, () => console.log("Servidor rodando"))
+// PORTA CORRETA (IMPORTANTE)
+const PORT = process.env.PORT || 3000
+
+app.listen(PORT, () => {
+  console.log("Servidor rodando na porta", PORT)
+})
